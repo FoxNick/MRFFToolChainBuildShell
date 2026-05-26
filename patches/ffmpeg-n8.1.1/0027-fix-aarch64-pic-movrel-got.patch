@@ -1,0 +1,25 @@
+From: Build Script <build@example.com>
+Date: Mon, 26 May 2026 00:00:00 +0000
+Subject: [PATCH] Fix AArch64 PIC movrel macro to use GOT-relative addressing
+
+The movrel macro in asm.S uses ADRP+ADD for symbol references when
+CONFIG_PIC is defined on Linux/Android. However, this creates
+R_AARCH64_ADR_PREL_PG_HI21 relocations that are not compatible with
+shared library linking. Use GOT-relative addressing instead.
+
+diff --git a/libavutil/aarch64/asm.S b/libavutil/aarch64/asm.S
+--- a/libavutil/aarch64/asm.S
++++ b/libavutil/aarch64/asm.S
+@@ -322,8 +322,10 @@
+         adrp            \rd, :pg_hi21_nc:\val+(\offset)
+ #   else
+-        adrp            \rd, \val+(\offset)
++        adrp            \rd, :got:\val
++        ldr             \rd, [\rd, :got_lo12:\val]
++        .if \offset != 0
++            add         \rd, \rd, \offset
++        .endif
+-        add             \rd, \rd, :lo12:\val+(\offset)
+ #   endif
+ #else
+         ldr             \rd, =\val+\offset
