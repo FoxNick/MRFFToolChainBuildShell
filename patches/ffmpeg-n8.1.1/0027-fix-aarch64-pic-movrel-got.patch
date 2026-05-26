@@ -1,4 +1,4 @@
-From: Build Script <build@example.com>
+From: qianlongxu <qianlongxu@gmail.com>
 Date: Mon, 26 May 2026 00:00:00 +0000
 Subject: [PATCH] Fix AArch64 PIC movrel macro to use GOT-relative addressing
 
