@@ -27,19 +27,33 @@ env_assert "MR_DOWNLOAD_ONAME"
 env_assert "MR_UNCOMPRESS_DIR"
 echo "===check env end==="
 
+function assert_secure_url() {
+    local url="$1"
+    case "$url" in
+        https://*|file://*)
+        ;;
+        *)
+            echo "❌ refuse to download from an unencrypted url: $url"
+            echo "use a https url, MR_DOWNLOAD_BASEURL must start with https://"
+            exit 1
+        ;;
+    esac
+}
+
 function download() {
     local dst="$1"
     echo "---[download]-----------------"
     echo "$MR_DOWNLOAD_URL"
     
+    assert_secure_url "$MR_DOWNLOAD_URL"
+    
     mkdir -p $(dirname "$dst")
     local tname="${dst}.tmp"
-    curl -fL --retry 3 --retry-delay 5 --retry-max-time 30 "$MR_DOWNLOAD_URL" -o "$tname"
-    
-    if [[ $? -eq 0 ]];then
+    if curl -fL --proto '=https,file' --proto-redir '=https' --tlsv1.2 --retry 3 --retry-delay 5 --retry-max-time 30 "$MR_DOWNLOAD_URL" -o "$tname";then
         mv "$tname" "${dst}"
     else
         rm -f "$tname"
+        exit 1
     fi
 }
 

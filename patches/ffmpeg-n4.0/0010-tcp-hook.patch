@@ -203,10 +203,11 @@ diff --git a/libavformat/tcp.c b/libavformat/tcp.c
 index 8773493..fc72623 100644
 --- a/libavformat/tcp.c
 +++ b/libavformat/tcp.c
-@@ -23,6 +23,8 @@
+@@ -23,6 +23,9 @@
  #include "libavutil/parseutils.h"
  #include "libavutil/opt.h"
  #include "libavutil/time.h"
++#include "libavutil/avstring.h"
 +#include "libavutil/application.h"
 +#include "libavutil/dns_cache.h"
  
@@ -534,7 +535,7 @@ index 8773493..fc72623 100644
 +
 +    if (s->fastopen) {
 +        s->tcp_connected = 0;
-+        strcpy(s->uri, uri);
++        av_strlcpy(s->uri, uri, sizeof(s->uri));
 +        return 0;
 +    }
  

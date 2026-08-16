@@ -85,6 +85,10 @@ on:
 
 name: build a lib
 
+# only contents is needed: push the upgraded lib config and create the release
+permissions:
+  contents: write
+
 jobs:
   build:
     name: compile ${{ inputs.lib }} for ${{ inputs.platform }} then deploy
@@ -92,7 +96,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-    - uses: nttld/setup-ndk@v1
+    - uses: nttld/setup-ndk@2817442ee7c3346c1eb7d2ec60263c93206ba14f # v1
       id: setup-ndk
       with:
         ndk-version: r27c
@@ -104,8 +108,15 @@ jobs:
       if: inputs.lib == 'dovi'
       run: cargo install cargo-c
     - name: Install dependencies
-      run: .github/workflows/install-dependencies.sh ${{ inputs.lib }} ${{ inputs.platform }}
+      run: .github/workflows/install-dependencies.sh "$INPUT_LIB" "$INPUT_PLATFORM"
+      env:
+        INPUT_LIB: ${{ inputs.lib }}
+        INPUT_PLATFORM: ${{ inputs.platform }}
     - name: One Step
-      run: .github/workflows/onestep.sh ${{ inputs.lib }} ${{ inputs.platform }} ${{ inputs.dryrun }} ${{ inputs.verbose }}
+      run: .github/workflows/onestep.sh "$INPUT_LIB" "$INPUT_PLATFORM" "$INPUT_DRYRUN" "$INPUT_VERBOSE"
       env:
         ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+        INPUT_LIB: ${{ inputs.lib }}
+        INPUT_PLATFORM: ${{ inputs.platform }}
+        INPUT_VERBOSE: ${{ inputs.verbose }}
+        INPUT_DRYRUN: ${{ github.event_name == 'pull_request' && 'true' || inputs.dryrun }}

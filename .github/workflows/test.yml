@@ -7,6 +7,10 @@ on:
 
 name: Test Release
 
+# only contents is needed: push the upgraded lib config and create the release
+permissions:
+  contents: write
+
 jobs:
   build:
     name: compile none then deploy
@@ -19,4 +23,6 @@ jobs:
     - name: Install cargo-c
       run: cargo install cargo-c
     - name: One Step
-      run: .github/workflows/onestep.sh test all
+      run: .github/workflows/onestep.sh test all "$DRY_RUN"
+      env:
+        DRY_RUN: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
