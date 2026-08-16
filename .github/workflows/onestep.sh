@@ -194,6 +194,11 @@ function upgrade()
 function publish()
 {
     echo "---Create Release--------------------------------------"
+    # a pull_request build is on a detached HEAD, it can't commit tags or release.
+    if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]];then
+        echo "pull request build: skip upgrade tag and release."
+        return
+    fi
     if [[ $DRYRUN ]];then
         echo "DRYRUN: gh release create $TAG -t $TITLE $DIST_DIR/*.*"
         return
