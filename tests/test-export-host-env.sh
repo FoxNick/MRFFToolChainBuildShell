@@ -11,7 +11,10 @@ function run_host_env()
 {
     local script="$1"
     shift
-    run env "$@" bash -c "source '${REPO_ROOT}/tools/${script}'; env | sort"
+    # NDK variables may be set on the host (CI runners define them), drop them
+    # so every test controls its own environment
+    run env -u ANDROID_NDK_HOME -u ANDROID_NDK_ROOT -u ANDROID_NDK \
+        "$@" bash -c "source '${REPO_ROOT}/tools/${script}'; env | sort"
 }
 
 function test_apple_ios_default_archs()

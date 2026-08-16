@@ -106,6 +106,9 @@ function run_test_function()
 
     local tmp_dir
     tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/mrff-test.XXXXXX")
+    # TMPDIR has a trailing slash on macOS, and $PWD based paths never do, so
+    # normalize to keep string comparisons meaningful
+    tmp_dir=$(cd "$tmp_dir" && pwd -P)
 
     local log="${tmp_dir}/.harness-output"
     (
