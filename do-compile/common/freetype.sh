@@ -13,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-# call common cmake build shell
-./cmake-compatible.sh "-DCOMPILE_10BIT=1 -DBUILD_SHARED_LIBS=0"
+# call common meson build shell
+"$MR_PLAT_COMPILE_DIR/meson-compatible.sh" "-Dpng=disabled -Dharfbuzz=disabled"

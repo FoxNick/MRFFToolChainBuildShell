@@ -13,10 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
-set -e
-
-CFG_FLAGS="-Ddocs=false -Dbin=false -Dtests=false"
-
-./meson-compatible.sh "$CFG_FLAGS"
+# call common cmake build shell
+"$MR_PLAT_COMPILE_DIR/cmake-compatible.sh" "-DSOUNDSTRETCH=0"

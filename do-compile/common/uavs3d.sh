@@ -15,4 +15,4 @@
 # limitations under the License.
 
 # call common cmake build shell
-./cmake-compatible.sh
+"$MR_PLAT_COMPILE_DIR/cmake-compatible.sh" "-DCOMPILE_10BIT=1 -DBUILD_SHARED_LIBS=0"

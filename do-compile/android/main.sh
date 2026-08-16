@@ -23,24 +23,4 @@ set -e
 THIS_DIR=$(DIRNAME=$(dirname "$0"); cd "$DIRNAME"; pwd)
 cd "$THIS_DIR"
 
-# 循环编译所有的库
-for lib in $MR_VENDOR_LIBS
-do
-    [[ ! -f "$MR_SHELL_CONFIGS_DIR/libs/${lib}.sh" ]] && (echo "❌$lib config not exist,compile will stop.";exit 1;)
-
-    echo "===[$MR_CMD $lib]===================="
-    source "$MR_SHELL_CONFIGS_DIR/libs/${lib}.sh"
-    
-    echo "LIB_NAME        : [$LIB_NAME]"
-    echo "GIT_COMMIT      : [$GIT_COMMIT]"
-    echo "LIPO_LIBS       : [$LIPO_LIBS]"
-    echo "GIT_UPSTREAM    : [$GIT_UPSTREAM]"
-
-    ./any.sh
-    if [[ $? -eq 0 ]];then
-        echo "🎉  Congrats"
-        echo "🚀  ${LIB_NAME} successfully $MR_CMD."
-        echo
-    fi
-    echo "===================================="
-done
+source ../common/compile-libs.sh

@@ -14,31 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# 
-# brew install nasm
-# If you really want to compile without asm, configure with --disable-asm.
 
-export LIB_NAME='ffmpeg'
-export LIPO_LIBS="libavcodec libavformat libavutil libswscale libswresample libavfilter libavdevice libpostproc"
-export LIB_DEPENDS_BIN="nasm pkg-config"
-export GIT_LOCAL_REPO=extra/ffmpeg
-export REPO_DIR=ffmpeg7
-export PATCH_DIR=../../patches/ffmpeg-n7.1.1
-
-# you can export GIT_FFMPEG_UPSTREAM=git@xx:yy/FFmpeg.git use your mirror
-if [[ "$GIT_FFMPEG_UPSTREAM" != "" ]] ;then
-    export GIT_UPSTREAM="$GIT_FFMPEG_UPSTREAM"
-else
-    export GIT_UPSTREAM=https://github.com/FFmpeg/FFmpeg.git
-fi
-
-export GIT_COMMIT=n7.1.3 #origin/release/5.1
-export GIT_REPO_VERSION=7.1.3
-
-# pre compiled
-
-export PRE_COMPILE_TAG_TVOS=ffmpeg7-7.1.3-260512163026
-export PRE_COMPILE_TAG_MACOS=ffmpeg7-7.1.3-260512163026
-export PRE_COMPILE_TAG_IOS=ffmpeg7-7.1.3-260512163026
-
-export PRE_COMPILE_TAG_ANDROID=ffmpeg7-7.1.1-250606143631
+# ffmpeg7 is an alias of the default ffmpeg config
+MR_LIB_CONFIG_DIR=$(DIRNAME=$(dirname "${BASH_SOURCE[0]}"); cd "${DIRNAME}"; pwd)
+source "$MR_LIB_CONFIG_DIR/ffmpeg.sh"

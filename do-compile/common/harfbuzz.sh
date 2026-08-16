@@ -14,9 +14,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# https://github.com/harfbuzz/harfbuzz/blob/main/BUILD.md
+
+# https://trac.macports.org/ticket/60987
 
 set -e
 
-CFG_FLAGS="-Ddocs=false -Dbin=false -Dtests=false"
+CFG_FLAGS="-Ddocs=disabled -Dcairo=disabled -Dchafa=disabled -Dtests=disabled"
 
-./meson-compatible.sh "$CFG_FLAGS"
+echo "----------------------"
+echo "[*] check freetype"
+
+check_pkg_lib 'freetype2'
+
+if has_pkg_lib 'freetype2';then
+    CFG_FLAGS="$CFG_FLAGS -Dfreetype=enabled"
+else
+    CFG_FLAGS="$CFG_FLAGS -Dfreetype=disabled"
+fi
+
+"$MR_PLAT_COMPILE_DIR/meson-compatible.sh" "$CFG_FLAGS"

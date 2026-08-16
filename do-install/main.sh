@@ -47,14 +47,14 @@ function parse_lib_config() {
     export LIB_NAME
 }
 
+source "$MR_SHELL_TOOLS_DIR/lib-config-loop.sh"
+
 function do_install_a_lib()
 {
     local lib_config="$1"
-    lib_config=$(make_absolute_path "$lib_config")
-    [[ ! -f "$lib_config" ]] && (echo "❌$lib_config config not exist,install will stop."; exit 1;)
-        
+
     echo "===[install $lib_config]===================="
-    source "$lib_config"
+    source_lib_config "$lib_config"
     parse_lib_config
     if [[ $FORCE_XCFRAMEWORK ]];then
         ./install-pre-xcf.sh
@@ -64,46 +64,11 @@ function do_install_a_lib()
     echo "===================================="
 }
 
-function install_libs()
-{
-    # 循环安装所有的库
-    for lib in $MR_VENDOR_LIBS
-    do
-        do_install_a_lib "configs/libs/${lib}.sh"
-    done
-    
-    if [[ -n "$LIB_CONFIG_PATH" ]];then
-        echo 
-        echo "install specific lib config : [$LIB_CONFIG_PATH]"
-        do_install_a_lib "$LIB_CONFIG_PATH"
-    fi
-}
-
-function parse_args() {
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            -lib-config)
-                shift
-                LIB_CONFIG_PATH="$1"
-            ;;
-            -correct-pc)
-                shift
-                CORRECT_PC="$1"
-            ;;
-            *)
-                echo "unknown option: $1"
-                sleep 2
-                ;;
-        esac
-        shift
-    done
-}
-
-parse_args "$@"
+parse_lib_options "$@"
 
 if [[ -n "$CORRECT_PC" ]];then
     echo "correct pc file : [$CORRECT_PC]"
     ./correct-pc.sh "$CORRECT_PC"
 else
-    install_libs
+    foreach_lib_config do_install_a_lib
 fi
