@@ -23,10 +23,20 @@ cd "$THIS_DIR"
 function correct_pc_file(){
     local fix_path="$1"
     local dir=${PWD}
-    
+
+    if [[ -z "$fix_path" ]]; then
+        echo "usage: $0 <dir contains pc files>" >&2
+        exit 1
+    fi
+
+    if [[ ! -d "$fix_path" ]]; then
+        echo "can't fix pc files, no such dir: $fix_path" >&2
+        exit 1
+    fi
+
     echo "fix pc files in folder: $fix_path"
     cd "$fix_path"
-    for pc in `find . -type f -name "*.pc"` ;
+    while IFS= read -r pc;
     do
         local pkgconfig=$(cd $(dirname "$pc"); pwd)
         local lib_dir=$(cd $(dirname "$pkgconfig"); pwd)
@@ -73,7 +83,7 @@ function correct_pc_file(){
         my_sed_i "s|-L/[^ ]*/universal/\([^ /]*\)/lib|-L$escaped_root/universal/\1/lib|g" "$pc"
         # 2. Fix -I/path/to/universal/LIB_NAME/include -> -I/local/product/universal/LIB_NAME/include
         my_sed_i "s|-I/[^ ]*/universal/\([^ /]*\)/include|-I$escaped_root/universal/\1/include|g" "$pc"
-    done
+    done < <(find . -type f -name "*.pc")
     
     cd "$dir"
 }

@@ -26,19 +26,29 @@ cd "$THIS_DIR"
 do_lipo_lib() {
     local lib=$1
     local archs="$2"
-    
+    local found=0
+
     for arch in $archs; do
         local lib_dir="$MR_PRODUCT_ROOT/$LIB_NAME-$arch"
         
         if [ -d "$lib_dir" ]; then
-            my_sed_i "s|-lpthread|-pthread|" "$lib_dir"/lib/pkgconfig/*.pc
+            local pc_files=("$lib_dir"/lib/pkgconfig/*.pc)
+            if [[ -f "${pc_files[0]}" ]]; then
+                my_sed_i "s|-lpthread|-pthread|" "${pc_files[@]}"
+            fi
             # Copy the directory
             mkdir -p "$MR_UNI_PROD_DIR/$LIB_NAME"
             cp -Rf "$lib_dir" "$MR_UNI_PROD_DIR/$LIB_NAME"
+            found=$((found + 1))
         else
-            echo "can't find the $arch arch $lib"
+            echo "⚠️ can't find the $arch arch $lib" >&2
         fi
     done
+
+    if [[ $found -eq 0 ]]; then
+        echo "❌ none of the archs [$archs] built $lib, check the compile log." >&2
+        return 1
+    fi
 }
 
 do_lipo_all() {
@@ -49,7 +59,7 @@ do_lipo_all() {
     rm -rf $MR_UNI_PROD_DIR/$LIB_NAME
     echo "lipo archs: $archs"
     
-    do_lipo_lib "$lib" "$archs"
+    do_lipo_lib "$LIB_NAME" "$archs"
     
     echo '----------------------'
     echo 
@@ -65,6 +75,11 @@ function do_compile() {
         exit 1
     fi
     
+    if [[ ! -f "./$LIB_NAME.sh" ]]; then
+        echo "!! ERROR: no compile script for $LIB_NAME: $PWD/$LIB_NAME.sh" >&2
+        exit 1
+    fi
+
     mkdir -p "$MR_BUILD_PREFIX"
     ./$LIB_NAME.sh
 }

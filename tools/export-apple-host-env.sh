@@ -52,17 +52,27 @@ function install_depends() {
     if command -v "$check_name" &> /dev/null; then
         echo "[✅] ${name}: $(eval $check_name --version | head -n 1)"
         return 0
-    else
-        if [[ "$name" == "rustup" || "$name" == "cargo" ]]; then
-            echo "will install rustup-init."
-            brew install rustup-init
-            rustup-init -y
-            return 0    
-        else
-            echo "will use brew install ${name}."
-            brew install "$name"
-        fi
     fi
+
+    if [[ "$name" == "rustup" || "$name" == "cargo" ]]; then
+        echo "will install rustup-init."
+        brew install rustup-init
+        rustup-init -y
+        return 0
+    fi
+
+    echo "will use brew install ${name}."
+    if ! brew install "$name"; then
+        echo "❌ can't install ${name}, please install it by hand." >&2
+        return 1
+    fi
+
+    # brew may succeed without putting the bin in PATH, e.g. keg-only formulas.
+    if ! command -v "$check_name" &> /dev/null; then
+        echo "❌ ${name} is still not in PATH after brew install." >&2
+        return 1
+    fi
+    echo "[✅] ${name}: $(eval $check_name --version | head -n 1)"
 }
 
 # 定义跨平台sed函数

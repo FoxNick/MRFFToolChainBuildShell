@@ -92,12 +92,17 @@ EOF
 function parse_path()
 {
     local p="$1"
+    local dir
     if [[ $p == /* ]]; then
-        echo $(cd "$p"; pwd)
+        dir="$p"
     else
-        local dir="$MR_SHELL_ROOT_DIR/$p"
-        echo $(mkdir -p "$dir";cd "$dir";pwd)
+        dir="$MR_SHELL_ROOT_DIR/$p"
     fi
+    if ! mkdir -p "$dir"; then
+        echo "can't create dir: [$dir]" >&2
+        return 1
+    fi
+    (cd "$dir" && pwd)
 }
 
 function env_assert()
@@ -124,11 +129,15 @@ function echo_env()
 function make_absolute_path()
 {
     local p="$1"
-    if [[ $p == /* ]]; then
-        echo "$(cd "$(dirname "$p")" && pwd)/$(basename "$p")"
-    else
-        echo "$(cd "$(dirname "$MR_SHELL_ROOT_DIR/$p")" && pwd)/$(basename "$p")"
+    if [[ "$p" != /* ]]; then
+        p="$MR_SHELL_ROOT_DIR/$p"
     fi
+    local dir
+    if ! dir=$(cd "$(dirname "$p")" && pwd); then
+        echo "no such dir: [$(dirname "$p")]" >&2
+        return 1
+    fi
+    echo "${dir}/$(basename "$p")"
 }
 
 export -f env_assert
@@ -160,38 +169,68 @@ case $1 in
         shift 1
         cmd=build
     ;;
-    *)
+    '')
         main_usage
         exit 0
+    ;;
+    *)
+        echo "unknown command: [$1]" >&2
+        main_usage >&2
+        exit 1
     ;;
 esac
 
 export MR_ACTION=$action
 
+# make sure an option which needs a value really got one
+function assert_option_value()
+{
+    if [[ -z "$2" ]]; then
+        echo "$1 needs a value" >&2
+        exit 1
+    fi
+}
+
 while [[ $# -gt 0 ]]; do
     case $1 in
         -p)
             shift
+            assert_option_value -p "$1"
             platform="$1"
         ;;
         -c)
             shift
+            assert_option_value -c "$1"
             cmd="$1"
         ;;
         -a)
             shift
+            assert_option_value -a "$1"
             arch="$1"
         ;;
         -l)
             shift
+            assert_option_value -l "$1"
             libs="$1"
         ;;
         -s)
             shift
-            workspace=$(parse_path "$1")
+            if [[ -z "$1" ]]; then
+                echo "-s needs a workspace dir" >&2
+                exit 1
+            fi
+            if ! workspace=$(parse_path "$1"); then
+                echo "invalid workspace dir: [$1]" >&2
+                exit 1
+            fi
         ;;
         -j)
             shift
+            assert_option_value -j "$1"
+            if [[ ! "$1" =~ ^[1-9][0-9]*$ ]]; then
+                echo "-j needs a positive number, got: [$1]" >&2
+                exit 1
+            fi
             nproc="$1"
         ;;
         --help)
