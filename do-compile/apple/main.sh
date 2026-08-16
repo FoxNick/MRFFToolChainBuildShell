@@ -16,66 +16,11 @@
 #
 #
 
+
 set -e
 
 # 当前脚本所在目录
 THIS_DIR=$(DIRNAME=$(dirname "$0"); cd "$DIRNAME"; pwd)
 cd "$THIS_DIR"
 
-function do_compile_a_lib() 
-{
-    local lib_config="$1"
-    lib_config=$(make_absolute_path "$lib_config")
-    [[ ! -f "$lib_config" ]] && (echo "❌$lib_config config not exist, compile will stop."; exit 1;)
-
-    echo "===[$MR_CMD $lib]===================="
-    source "$lib_config"
-
-    echo "LIB_NAME        : [$LIB_NAME]"
-    echo "GIT_COMMIT      : [$GIT_COMMIT]"
-    echo "LIPO_LIBS       : [$LIPO_LIBS]"
-    echo "GIT_UPSTREAM    : [$GIT_UPSTREAM]"
-
-    ./any.sh
-    if [[ $? -eq 0 ]];then
-        echo "🎉  Congrats"
-        echo "🚀  ${LIB_NAME} ${GIT_COMMIT} successfully $MR_CMD."
-        echo
-    fi
-    echo "===================================="
-}
-
-function compile_libs()
-{
-    # 循环编译所有的库
-    for lib in $MR_VENDOR_LIBS
-    do
-        do_compile_a_lib "configs/libs/${lib}.sh"
-    done
-
-    if [[ -n "$LIB_CONFIG_PATH" ]];then
-        echo 
-        echo "install specific lib config : [$LIB_CONFIG_PATH]"
-        do_compile_a_lib "$LIB_CONFIG_PATH"
-    fi
-}
-
-function parse_args() {
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            -lib-config)
-                shift
-                LIB_CONFIG_PATH="$1"
-            ;;
-            *)
-                echo "unknown option: $1"
-                sleep 2
-                ;;
-        esac
-        shift
-    done
-}
-
-parse_args "$@"
-echo "LIB_CONFIG_PATH:$LIB_CONFIG_PATH"
-compile_libs
+source ../common/compile-libs.sh

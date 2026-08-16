@@ -41,40 +41,5 @@ export MR_HOST_NPROC=$(sysctl -n hw.physicalcpu)
 export MR_TAGET_OS="darwin"
 export DEBUG_INFORMATION_FORMAT=dwarf-with-dsym
 
-function install_depends() {
-    local name="$1"
-    local check_name="$name"
-    # On macOS, GNU libtool is installed as glibtool to avoid conflict with Apple's libtool
-    if [[ "$(uname)" == "Darwin" && "$name" == "libtool" ]]; then
-        check_name="glibtool"
-    fi
-
-    if command -v "$check_name" &> /dev/null; then
-        echo "[✅] ${name}: $(eval $check_name --version | head -n 1)"
-        return 0
-    else
-        if [[ "$name" == "rustup" || "$name" == "cargo" ]]; then
-            echo "will install rustup-init."
-            brew install rustup-init
-            rustup-init -y
-            return 0    
-        else
-            echo "will use brew install ${name}."
-            brew install "$name"
-        fi
-    fi
-}
-
-# 定义跨平台sed函数
-my_sed_i() {
-    if [[ "$(uname)" == "Darwin" ]]; then
-        # macOS系统
-        sed -i '' "$@"
-    else
-        # Linux系统及其他系统
-        sed -i "$@"
-    fi
-}
-
-export -f install_depends
-export -f my_sed_i
+MR_HOST_ENV_DIR=$(DIRNAME=$(dirname "${BASH_SOURCE[0]}"); cd "${DIRNAME}"; pwd)
+source "$MR_HOST_ENV_DIR/common-utils.sh"

@@ -114,46 +114,34 @@ has_feature() {
     return 0
 }
 
+# 检测第三方库并追加 FFmpeg 配置参数
+# $1 pkg-config 名称；$2 找到时追加的参数；$3 找不到时打印的信息；$4 找不到时追加的参数(可选)
+detect_third_lib() {
+    local pkg="$1"
+    if pkg-config --libs "$pkg" --silence-errors >/dev/null;then
+        echo "[✅] $2 : $(pkg-config --modversion $pkg)"
+        THIRD_CFG_FLAGS="$THIRD_CFG_FLAGS $2"
+    else
+        echo "[❌] $3"
+        if [[ -n "$4" ]];then
+            THIRD_CFG_FLAGS="$THIRD_CFG_FLAGS $4"
+        fi
+    fi
+    echo "----------------------"
+    return 0
+}
+
 echo "----------------------"
 # use pkg-config fix ff4.0--ijk0.8.8--20210426--001 use openssl 1_1_1m occur can't find openssl error.
-
-pkg-config --libs openssl --silence-errors >/dev/null && enable_openssl=1
-
-if [[ $enable_openssl ]];then
-    echo "[✅] --enable-openssl : $(pkg-config --modversion openssl)"
-    THIRD_CFG_FLAGS="$THIRD_CFG_FLAGS --enable-nonfree --enable-openssl"
-else
-    echo "[❌] --disable-openssl"
-fi
-
-echo "----------------------"
-
-pkg-config --libs opus --silence-errors >/dev/null && enable_opus=1
-
-if [[ $enable_opus ]];then
-    echo "[✅] --enable-libopus : $(pkg-config --modversion opus)"
-    THIRD_CFG_FLAGS="$THIRD_CFG_FLAGS --enable-libopus --enable-decoder=opus"
-else
-    echo "[❌] --disable-libopus --disable-decoder=opus"
-fi
-
-echo "----------------------"
+detect_third_lib openssl "--enable-nonfree --enable-openssl" "--disable-openssl"
+detect_third_lib opus "--enable-libopus --enable-decoder=opus" "--disable-libopus --disable-decoder=opus"
 
 # FFmpeg 4.2 支持AV1、AVS2等格式
 # dav1d由VideoLAN，VLC和FFmpeg联合开发，项目由AOM联盟赞助，和libaom相比，dav1d性能普遍提升100%，最高提升400%
 
 result=$(gt_or_equal "$GIT_REPO_VERSION" "4.2")
 if [[ $result ]]; then
-    
-    pkg-config --libs dav1d --silence-errors >/dev/null && enable_dav1d=1
-
-    if [[ $enable_dav1d ]];then
-        echo "[✅] --enable-libdav1d : $(pkg-config --modversion dav1d)"
-        THIRD_CFG_FLAGS="$THIRD_CFG_FLAGS --enable-libdav1d --enable-decoder=libdav1d"
-    else
-        echo "[❌] --disable-libdav1d --disable-decoder=libdav1d"
-    fi
-    echo "----------------------"
+    detect_third_lib dav1d "--enable-libdav1d --enable-decoder=libdav1d" "--disable-libdav1d --disable-decoder=libdav1d"
 fi
 
 #从FFmpeg7.1.1开始支持硬解av1，苹果需要M3芯片
@@ -170,32 +158,14 @@ echo "----------------------"
 # 从6开始支持的 smb2 协议
 result=$(gt_or_equal "$GIT_REPO_VERSION" "6")
 if [[ $result ]]; then
-    pkg-config --libs libsmb2 --silence-errors >/dev/null && enable_smb2=1
-
-    if [[ $enable_smb2 ]];then
-        echo "[✅] --enable-libsmb2 : $(pkg-config --modversion libsmb2)"
-        THIRD_CFG_FLAGS="$THIRD_CFG_FLAGS --enable-libsmb2 --enable-protocol=libsmb2"
-    else
-        echo "[❌] --disable-libsmb2 --disable-protocol=libsmb2"
-    fi
-
-    echo "----------------------"
+    detect_third_lib libsmb2 "--enable-libsmb2 --enable-protocol=libsmb2" "--disable-libsmb2 --disable-protocol=libsmb2"
 
     echo "[✅] --enable-parser=av3a"
     THIRD_CFG_FLAGS="$THIRD_CFG_FLAGS --enable-parser=av3a --enable-demuxer=av3a"
     echo "----------------------"
 fi
 
-pkg-config --libs libbluray --silence-errors >/dev/null && enable_bluray=1
-
-if [[ $enable_bluray ]];then
-    echo "[✅] --enable-libbluray : $(pkg-config --modversion libbluray)"
-    THIRD_CFG_FLAGS="$THIRD_CFG_FLAGS --enable-libbluray --enable-protocol=bluray"
-else
-    echo "[❌] --disable-libbluray --disable-protocol=bluray"
-fi
-
-echo "----------------------"
+detect_third_lib libbluray "--enable-libbluray --enable-protocol=bluray" "--disable-libbluray --disable-protocol=bluray"
 
 #不确定7代之前的版本是否支持dvdvideo
 result=$(gt_or_equal "$GIT_REPO_VERSION" "7.1.1")
@@ -213,29 +183,13 @@ if [[ $result ]]; then
 else
     dvd_feature=$(has_feature "libdvdread")
     if [[ $dvd_feature ]]; then
-        pkg-config --libs dvdread --silence-errors >/dev/null && enable_dvdread=1
-        if [[ $enable_dvdread ]];then
-            echo "[✅] --enable-libdvdread : $(pkg-config --modversion dvdread)"
-            THIRD_CFG_FLAGS="$THIRD_CFG_FLAGS --enable-libdvdread --enable-protocol=dvd"
-        else
-            echo "[❌] --disable-dvd protocol"
-        fi
-        echo "----------------------"
+        detect_third_lib dvdread "--enable-libdvdread --enable-protocol=dvd" "--disable-dvd protocol"
     fi
 fi
 
 result=$(gt_or_equal "$GIT_REPO_VERSION" "5")
 if [[ $result ]]; then
-    pkg-config --libs uavs3d --silence-errors >/dev/null && enable_uavs3d=1
-
-    if [[ $enable_uavs3d ]];then
-        echo "[✅] --enable-libuavs3d : $(pkg-config --modversion uavs3d)"
-        THIRD_CFG_FLAGS="$THIRD_CFG_FLAGS --enable-libuavs3d --enable-decoder=libuavs3d"
-    else
-        echo "[❌] --disable-libuavs3d --disable-decoder=libuavs3d"
-    fi
-
-    echo "----------------------"
+    detect_third_lib uavs3d "--enable-libuavs3d --enable-decoder=libuavs3d" "--disable-libuavs3d --disable-decoder=libuavs3d"
 fi
 
 result=$(gt_or_equal "8.1.1" "$GIT_REPO_VERSION")
@@ -243,29 +197,13 @@ if [[ ! $result ]]; then
     THIRD_CFG_FLAGS="$THIRD_CFG_FLAGS --disable-postproc"
 fi
 
-pkg-config --libs libxml-2.0 --silence-errors >/dev/null && enable_xml2=1
-
-if [[ $enable_xml2 ]];then
-    echo "[✅] --enable-libxml2 : $(pkg-config --modversion libxml-2.0)"
-    THIRD_CFG_FLAGS="$THIRD_CFG_FLAGS --enable-demuxer=dash --enable-libxml2"
-else
-    echo "[❌] --disable-demuxer=dash --disable-libxml2"
-fi
-
-echo "----------------------"
+detect_third_lib libxml-2.0 "--enable-demuxer=dash --enable-libxml2" "--disable-demuxer=dash --disable-libxml2"
 
 result=$(gt_or_equal "$GIT_REPO_VERSION" "7")
 if [[ $result && $MR_PLAT != 'android' ]]; then
-    enable_webp=
-    pkg-config --libs libwebp --silence-errors >/dev/null && enable_webp=1
-    if [[ $enable_webp ]];then
-        echo "[✅] --enable-libwebp --enable-decoder=webp : $(pkg-config --modversion libwebp)"
-        THIRD_CFG_FLAGS="$THIRD_CFG_FLAGS --enable-libwebp --enable-demuxer=webp --enable-decoder=libwebp"
-    else
-        echo "[❌] --disable-libwebp --disable-decoder=libwebp"
-        THIRD_CFG_FLAGS="$THIRD_CFG_FLAGS --disable-libwebp --disable-demuxer=webp --disable-decoder=libwebp"
-    fi
-    echo "----------------------"
+    detect_third_lib libwebp "--enable-libwebp --enable-demuxer=webp --enable-decoder=libwebp" \
+        "--disable-libwebp --disable-decoder=libwebp" \
+        "--disable-libwebp --disable-demuxer=webp --disable-decoder=libwebp"
 fi
 
 # export PKG_CONFIG_LIBDIR=$PKG_CONFIG_LIBDIR:/opt/homebrew/Cellar/shaderc/2024.0/lib/pkgconfig:/opt/homebrew/Cellar/little-cms2/2.16/lib/pkgconfig

@@ -14,5 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+CFG_FLAGS="-DENABLE_LIBKRB5=0 -DENABLE_GSSAPI=0"
+
+if [[ "$MR_PLAT" != 'android' ]];then
+    CFG_FLAGS="$CFG_FLAGS -DBUILD_SHARED_LIBS=0"
+fi
+
 # call common cmake build shell
-./cmake-compatible.sh "-DCOMPILE_10BIT=1 -DBUILD_SHARED_LIBS=0"
+"$MR_PLAT_COMPILE_DIR/cmake-compatible.sh" "$CFG_FLAGS"

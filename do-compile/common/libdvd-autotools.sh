@@ -13,19 +13,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-# call common cmake build shell
-./cmake-compatible.sh
+set -e
 
-mkdir -p ${MR_BUILD_PREFIX}/lib/pkgconfig
+THIS_DIR=$(DIRNAME=$(dirname "$0"); cd "$DIRNAME"; pwd)
+cd "$THIS_DIR"
 
-echo "
-prefix=${MR_BUILD_PREFIX}
-includedir=\${prefix}/include
-libdir=\${prefix}/lib
+CFG_FLAGS="--disable-dependency-tracking --disable-silent-rules --disable-apidoc --enable-static --disable-shared"
 
-Name: yuv
-Description: libyuv
-Version: ${GIT_REPO_VERSION}
-Libs: -L\${libdir} -lyuv
-Cflags: -I\${includedir}" > ${MR_BUILD_PREFIX}/lib/pkgconfig/yuv.pc
+if [[ "$MR_DEBUG" == "debug" ]];then
+    CFG_FLAGS="$CFG_FLAGS use_examples=yes"
+fi
+
+"$MR_COMMON_COMPILE_DIR/autotools-compatible.sh" "$CFG_FLAGS" autoreconf

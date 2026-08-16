@@ -14,25 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# https://github.com/harfbuzz/harfbuzz/blob/main/BUILD.md
-
-# https://trac.macports.org/ticket/60987
 
 set -e
 
-CFG_FLAGS="-Ddocs=disabled -Dcairo=disabled -Dchafa=disabled -Dtests=disabled"
+THIS_DIR=$(DIRNAME=$(dirname "$0"); cd "$DIRNAME"; pwd)
+cd "$THIS_DIR"
 
-echo "----------------------"
-echo "[*] check freetype"
-
-pkg-config --libs freetype2 --silence-errors >/dev/null && enable_freetype2=1
-
-if [[ $enable_freetype2 ]];then
-    echo "[*] --enable-freetype : $(pkg-config --modversion freetype2)"
-    CFG_FLAGS="$CFG_FLAGS -Dfreetype=enabled"
-else
-    echo "[*] --disable-freetype"
-    CFG_FLAGS="$CFG_FLAGS -Dfreetype=disabled"
-fi
-
-./meson-compatible.sh "$CFG_FLAGS"
+# dvdread 和 dvdnav 的编译方式完全一样
+"$MR_COMMON_COMPILE_DIR/libdvd-autotools.sh"

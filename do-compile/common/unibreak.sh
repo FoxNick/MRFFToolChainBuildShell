@@ -13,6 +13,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-# call common cmake build shell
-./cmake-compatible.sh "-DENABLE_LIBKRB5=0 -DENABLE_GSSAPI=0"
+set -e
+
+THIS_DIR=$(DIRNAME=$(dirname "$0"); cd "$DIRNAME"; pwd)
+cd "$THIS_DIR"
+
+CFG_FLAGS="--enable-static --disable-shared --silent"
+
+"$MR_COMMON_COMPILE_DIR/autotools-compatible.sh" "$CFG_FLAGS" autogen.sh
