@@ -26,7 +26,10 @@ function do_compile_a_lib()
 {
     local lib_config="$1"
     lib_config=$(make_absolute_path "$lib_config")
-    [[ ! -f "$lib_config" ]] && (echo "❌$lib_config config not exist, compile will stop."; exit 1;)
+    if [[ ! -f "$lib_config" ]]; then
+        echo "❌$lib_config config not exist, compile will stop." >&2
+        exit 1
+    fi
 
     echo "===[$MR_CMD $lib]===================="
     source "$lib_config"
@@ -36,12 +39,13 @@ function do_compile_a_lib()
     echo "LIPO_LIBS       : [$LIPO_LIBS]"
     echo "GIT_UPSTREAM    : [$GIT_UPSTREAM]"
 
-    ./any.sh
-    if [[ $? -eq 0 ]];then
-        echo "🎉  Congrats"
-        echo "🚀  ${LIB_NAME} ${GIT_COMMIT} successfully $MR_CMD."
-        echo
+    if ! ./any.sh; then
+        echo "❌ ${LIB_NAME} ${GIT_COMMIT} failed to $MR_CMD." >&2
+        exit 1
     fi
+    echo "🎉  Congrats"
+    echo "🚀  ${LIB_NAME} ${GIT_COMMIT} successfully $MR_CMD."
+    echo
     echo "===================================="
 }
 
@@ -65,11 +69,15 @@ function parse_args() {
         case "$1" in
             -lib-config)
                 shift
+                if [[ -z "$1" ]]; then
+                    echo "-lib-config needs a config file path" >&2
+                    exit 1
+                fi
                 LIB_CONFIG_PATH="$1"
             ;;
             *)
-                echo "unknown option: $1"
-                sleep 2
+                echo "unknown option: $1" >&2
+                exit 1
                 ;;
         esac
         shift

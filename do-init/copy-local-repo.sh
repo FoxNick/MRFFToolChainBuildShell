@@ -16,25 +16,32 @@
 #
 # copy local repo from $1 to $2，just contain lastest commit. 
 
+set -e
+
 if [[ -z $1 || -z $2 ]]; then
-    echo "invalid argvs for $0"
-    exit -1
+    echo "invalid argvs for $0" >&2
+    exit 1
+fi
+
+if [[ ! -d "$1/.git" ]]; then
+    echo "$1 is not a git repo" >&2
+    exit 1
 fi
 
 function main() {
     local src_repo=$1
     local dest_repo=$2
     
-    cd $src_repo
-    local full_src_repo_path="file://$(pwd)"
-    cd - >/dev/null
+    local src_repo_abs
+    src_repo_abs=$(cd "$src_repo" && pwd)
+    local full_src_repo_path="file://$src_repo_abs"
 
     if [[ -d $dest_repo ]]; then
         rm -rf "$dest_repo"
     fi
 
     # clone local repo.
-    git clone -b localBranch "$full_src_repo_path" $dest_repo --depth=1
+    git clone -b localBranch "$full_src_repo_path" "$dest_repo" --depth=1
 }
 
-main $*
+main "$@"

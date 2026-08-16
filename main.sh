@@ -17,6 +17,18 @@
 #
 
 set -e
+set -o pipefail
+
+# report which command failed instead of exiting quietly
+function on_error()
+{
+    local code=$1
+    local line=$2
+    local cmd=$3
+    echo "❌ $0 failed at line ${line}: [${cmd}] exit ${code}" >&2
+    exit "$code"
+}
+trap 'on_error $? $LINENO "$BASH_COMMAND"' ERR
 
 # 当前脚本所在目录
 THIS_DIR=$(DIRNAME=$(dirname "$0"); cd "$DIRNAME"; pwd)
@@ -52,6 +64,10 @@ case $MR_PLAT in
     ;;
     android)
         plat=android
+    ;;
+    *)
+        echo "unsupported platform: [$MR_PLAT]" >&2
+        exit 1
     ;;
 esac
 

@@ -27,9 +27,9 @@ function parse_lib_config() {
     local t=$(echo "PRE_COMPILE_TAG_$MR_PLAT" | tr '[:lower:]' '[:upper:]')
     local vt=$(eval echo "\$$t")
     
-    if test -z $vt ;then
-        echo "$t can't be nil"
-        exit
+    if [[ -z "$vt" ]];then
+        echo "$t can't be nil" >&2
+        exit 1
     fi
     
     export TAG=$vt
@@ -51,8 +51,11 @@ function do_install_a_lib()
 {
     local lib_config="$1"
     lib_config=$(make_absolute_path "$lib_config")
-    [[ ! -f "$lib_config" ]] && (echo "❌$lib_config config not exist,install will stop."; exit 1;)
-        
+    if [[ ! -f "$lib_config" ]]; then
+        echo "❌$lib_config config not exist,install will stop." >&2
+        exit 1
+    fi
+
     echo "===[install $lib_config]===================="
     source "$lib_config"
     parse_lib_config
@@ -84,15 +87,23 @@ function parse_args() {
         case "$1" in
             -lib-config)
                 shift
+                if [[ -z "$1" ]]; then
+                    echo "-lib-config needs a config file path" >&2
+                    exit 1
+                fi
                 LIB_CONFIG_PATH="$1"
             ;;
             -correct-pc)
                 shift
+                if [[ -z "$1" ]]; then
+                    echo "-correct-pc needs a dir path" >&2
+                    exit 1
+                fi
                 CORRECT_PC="$1"
             ;;
             *)
-                echo "unknown option: $1"
-                sleep 2
+                echo "unknown option: $1" >&2
+                exit 1
                 ;;
         esac
         shift

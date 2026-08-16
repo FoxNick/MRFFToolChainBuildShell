@@ -33,11 +33,15 @@ function parse_args() {
                 ;;
             -lib-config)
                 shift
+                if [[ -z "$1" ]]; then
+                    echo "-lib-config needs a config file path" >&2
+                    exit 1
+                fi
                 LIB_CONFIG_PATH="$1"
             ;;
             *)
-                echo "unknown option: $1"
-                sleep 2
+                echo "unknown option: $1" >&2
+                exit 1
                 ;;
         esac
         shift
@@ -48,9 +52,11 @@ function do_init_a_lib()
 {
     local lib_config="$1"
     lib_config=$(make_absolute_path "$lib_config")
-    [[ ! -f "$lib_config" ]] && (echo "❌$lib_config config not exist,init will stop.";exit 1;) 
+    if [[ ! -f "$lib_config" ]]; then
+        echo "❌$lib_config config not exist,init will stop." >&2
+        exit 1
+    fi
     echo "===[init $lib_config]===================="
-    [[ ! -f "$lib_config" ]] && (echo "❌$lib_config config not exist,init will stop.";exit 1;)
     source "$lib_config"
     export MR_LIB_CONFIG_PATH="$lib_config"
     ./init-repo.sh

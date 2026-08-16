@@ -39,10 +39,14 @@ function pull_common() {
     
     if [[ -d "$GIT_LOCAL_REPO" ]]; then
         cd "$GIT_LOCAL_REPO"
-        [[ -d .git/rebase-apply ]] && git am --skip
+        if [[ -d .git/rebase-apply ]]; then
+            # an interrupted git am left the repo dirty, skipping may fail, then abort it.
+            git am --skip || git am --abort
+        fi
         git reset --hard
         
-        local origin=$(git remote get-url origin)
+        local origin
+        origin=$(git remote get-url origin)
         if [[ "$origin" != "$GIT_UPSTREAM" ]]; then
             git remote remove origin
             git remote add origin "$GIT_UPSTREAM"
@@ -56,9 +60,9 @@ function pull_common() {
         fi
     else
         if [[ "$SKIP_PULL_BASE" == "1" ]]; then
-            echo "== local repo $REPO_DIR not exist,must clone by net firstly. =="
-            echo "try:unset SKIP_PULL_BASE"
-            exit -1
+            echo "== local repo $REPO_DIR not exist,must clone by net firstly. ==" >&2
+            echo "try:unset SKIP_PULL_BASE" >&2
+            exit 1
         else
             git clone $GIT_UPSTREAM $GIT_LOCAL_REPO
             cd "$GIT_LOCAL_REPO"
@@ -75,7 +79,12 @@ apply_patch_smart() {
     local patch_file=$1
 
     if [ -z "$patch_file" ]; then
-        echo "Usage: apply_patch_smart <patch_file>"
+        echo "Usage: apply_patch_smart <patch_file>" >&2
+        return 1
+    fi
+
+    if [ ! -f "$patch_file" ]; then
+        echo "patch file not exist: $patch_file" >&2
         return 1
     fi
 
@@ -86,7 +95,10 @@ apply_patch_smart() {
         echo "git am failed. Falling back to [git apply --reject]..."
 
         # 终止失败的 am 进程
-        git am --abort
+        if ! git am --abort; then
+            echo "Error: [git am --abort] failed, the repo needs a manual cleanup." >&2
+            return 1
+        fi
 
         # 尝试使用 --reject 强制应用
         if git apply --reject "$patch_file"; then
@@ -98,7 +110,7 @@ apply_patch_smart() {
             # 列出生成的 .rej 文件提醒用户
             find . -name "*.rej"
         else
-            echo "Error: [git apply --reject] also failed. Please check the patch file."
+            echo "Error: [git apply --reject] also failed. Please check the patch file." >&2
             return 1
         fi
     fi
@@ -111,7 +123,8 @@ function apply_patches() {
         return
     fi
 
-    local patch_base_dir=$(dirname "$MR_LIB_CONFIG_PATH")
+    local patch_base_dir
+    patch_base_dir=$(dirname "$MR_LIB_CONFIG_PATH")
     local patch_dir="${patch_base_dir}/$PATCH_DIR"
     patch_dir=$(make_absolute_path "$patch_dir")
     local patch_dirs=(
@@ -126,19 +139,25 @@ function apply_patches() {
             continue
         fi
 
+        local patch_files=("$patch_dir"/*.patch)
+        if [[ ! -f "${patch_files[0]}" ]]; then
+            echo "no patch file in: $patch_dir, skip."
+            continue
+        fi
+
         echo
         echo "== Applying patches: $(basename "$patch_dir") → $(basename "$PWD") =="
         if [[ "$SMART_APPLY" == "1" ]]; then
-            for patch_file in "$patch_dir"/*.patch; do
+            for patch_file in "${patch_files[@]}"; do
                 if ! apply_patch_smart "$patch_file"; then
-                    echo "Apply patch failed: $patch_file"
+                    echo "Apply patch failed: $patch_file" >&2
                     exit 1
                 fi
             done
         else
-            if ! git am --whitespace=fix --keep "$patch_dir"/*.patch; then
-                echo 'Apply patches failed!'
-                git am --skip
+            if ! git am --whitespace=fix --keep "${patch_files[@]}"; then
+                echo 'Apply patches failed!' >&2
+                git am --abort || git am --skip || true
                 exit 1
             fi
         fi
@@ -148,17 +167,21 @@ function apply_patches() {
 
 function make_arch_repo() {
     local dest_repo="${MR_SRC_ROOT}/$REPO_DIR-$1"
-    ./copy-local-repo.sh $GIT_LOCAL_REPO $dest_repo
-    cd $dest_repo
+    ./copy-local-repo.sh "$GIT_LOCAL_REPO" "$dest_repo"
+    cd "$dest_repo"
     if [[ "$GIT_WITH_SUBMODULE" ]]; then
         git submodule update --init --depth=1
     fi
-    echo "last commit:"$(git log -1 --pretty=format:"[%h] %s:%ce %cd")
+    echo "last commit:$(git log -1 --pretty=format:'[%h] %s:%ce %cd')"
     apply_patches
     if ! git describe --tags >/dev/null 2>&1; then
+        if [[ -z "$GIT_REPO_VERSION" ]]; then
+            echo "GIT_REPO_VERSION is nil, can't tag $REPO_DIR" >&2
+            exit 1
+        fi
         git tag "${GIT_REPO_VERSION}"
     fi
-    tag=$(git describe --tags 2>/dev/null)
+    tag=$(git describe --tags)
     echo "current tag:$tag"
     cd - >/dev/null
 }
@@ -172,7 +195,7 @@ function main() {
             done
         ;;
         *)
-            usage
+            echo "unsupported platform: [$MR_PLAT], use one of [ios|macos|tvos|android]" >&2
             exit 1
         ;;
     esac

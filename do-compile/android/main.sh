@@ -26,7 +26,10 @@ cd "$THIS_DIR"
 # 循环编译所有的库
 for lib in $MR_VENDOR_LIBS
 do
-    [[ ! -f "$MR_SHELL_CONFIGS_DIR/libs/${lib}.sh" ]] && (echo "❌$lib config not exist,compile will stop.";exit 1;)
+    if [[ ! -f "$MR_SHELL_CONFIGS_DIR/libs/${lib}.sh" ]]; then
+        echo "❌$lib config not exist,compile will stop." >&2
+        exit 1
+    fi
 
     echo "===[$MR_CMD $lib]===================="
     source "$MR_SHELL_CONFIGS_DIR/libs/${lib}.sh"
@@ -36,11 +39,12 @@ do
     echo "LIPO_LIBS       : [$LIPO_LIBS]"
     echo "GIT_UPSTREAM    : [$GIT_UPSTREAM]"
 
-    ./any.sh
-    if [[ $? -eq 0 ]];then
-        echo "🎉  Congrats"
-        echo "🚀  ${LIB_NAME} successfully $MR_CMD."
-        echo
+    if ! ./any.sh; then
+        echo "❌ ${LIB_NAME} failed to $MR_CMD." >&2
+        exit 1
     fi
+    echo "🎉  Congrats"
+    echo "🚀  ${LIB_NAME} successfully $MR_CMD."
+    echo
     echo "===================================="
 done

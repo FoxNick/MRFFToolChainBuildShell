@@ -22,18 +22,37 @@ function install_depends() {
     if command -v "$name" &> /dev/null; then
         echo "[✅] ${name}: $(eval $name --version | head -n 1)"
         return 0
-    else
-        if [[ "$name" == "rustup" || "$name" == "cargo" ]]; then
-            echo "will install rustup-init."
-            brew install rustup-init
-            rustup-init -y
-            return 0    
-        else
-            echo "will use brew install ${name}."
-            brew install "$name"
-        fi
     fi
-    echo "[✅] ${name}: $(eval $name --version)"
+
+    if [[ "$name" == "rustup" || "$name" == "cargo" ]]; then
+        echo "will install rustup-init."
+        brew install rustup-init
+        rustup-init -y
+        return 0
+    fi
+
+    echo "will use brew install ${name}."
+    if ! brew install "$name"; then
+        echo "❌ can't install ${name}, please install it by hand." >&2
+        return 1
+    fi
+
+    # brew may succeed without putting the bin in PATH, e.g. keg-only formulas.
+    if ! command -v "$name" &> /dev/null; then
+        echo "❌ ${name} is still not in PATH after brew install." >&2
+        return 1
+    fi
+    echo "[✅] ${name}: $(eval $name --version | head -n 1)"
+}
+
+# brew isn't available on the other hosts, so only check the depends there.
+function check_depends() {
+    local name="$1"
+    if ! command -v "$name" &> /dev/null; then
+        echo "❌ ${name} not found in PATH, please install it firstly." >&2
+        return 1
+    fi
+    echo "[✅] ${name}: $(eval $name --version | head -n 1)"
 }
 
 # 定义跨平台sed函数
@@ -51,12 +70,22 @@ export -f my_sed_i
 
 case "$OSTYPE" in
   darwin*)  HOST_TAG="darwin-x86_64"; export -f install_depends ;;
-  linux*)   HOST_TAG="linux-x86_64" ;;
+  linux*)   HOST_TAG="linux-x86_64"; install_depends() { check_depends "$@"; }; export -f check_depends install_depends ;;
   msys)
+    install_depends() { check_depends "$@"; }
+    export -f check_depends install_depends
     case "$(uname -m)" in
       x86_64) HOST_TAG="windows-x86_64" ;;
       i686)   HOST_TAG="windows" ;;
+      *)
+        echo "unsupported host arch: [$(uname -m)]" >&2
+        exit 1
+      ;;
     esac
+  ;;
+  *)
+    echo "unsupported host os: [$OSTYPE]" >&2
+    exit 1
   ;;
 esac
 
@@ -87,7 +116,17 @@ else
     exit 1
 fi
 
-export MR_NDK_REL=$(grep -m 1 -o '^## r[0-9]*.*' $MR_ANDROID_NDK_HOME/CHANGELOG.md | awk '{print $2}')
+if [[ ! -d "$MR_ANDROID_NDK_HOME" ]]; then
+    echo "the ndk dir doesn't exist: $MR_ANDROID_NDK_HOME" >&2
+    exit 1
+fi
+
+MR_NDK_REL=$(grep -m 1 -o '^## r[0-9]*.*' "$MR_ANDROID_NDK_HOME/CHANGELOG.md" | awk '{print $2}') || true
+if [[ -z "$MR_NDK_REL" ]]; then
+    echo "can't read the ndk release from $MR_ANDROID_NDK_HOME/CHANGELOG.md" >&2
+    exit 1
+fi
+export MR_NDK_REL
 
 export MR_TOOLCHAIN_ROOT="$MR_ANDROID_NDK_HOME/toolchains/llvm/prebuilt/${MR_HOST_TAG}"
 export PATH="${MR_TOOLCHAIN_ROOT}/bin:$PATH"

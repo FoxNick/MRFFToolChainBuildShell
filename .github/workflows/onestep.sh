@@ -24,7 +24,18 @@ fi
 
 export HOMEBREW_NO_AUTO_UPDATE=1
 export RELEASE_DATE=$(TZ=UTC-8 date +'%y%m%d%H%M%S')
-export RELEASE_VERSION=$(grep GIT_REPO_VERSION= ./configs/libs/${LIB_NAME}.sh | tail -n 1 | awk -F = '{printf "%s",$2}')
+
+if [[ ! -f ./configs/libs/${LIB_NAME}.sh ]]; then
+    echo "no such lib config: ./configs/libs/${LIB_NAME}.sh" >&2
+    exit 1
+fi
+
+RELEASE_VERSION=$(grep GIT_REPO_VERSION= ./configs/libs/${LIB_NAME}.sh | tail -n 1 | awk -F = '{printf "%s",$2}') || true
+if [[ -z "$RELEASE_VERSION" ]]; then
+    echo "can't read GIT_REPO_VERSION from ./configs/libs/${LIB_NAME}.sh" >&2
+    exit 1
+fi
+export RELEASE_VERSION
 export TAG=${LIB_NAME}-${RELEASE_VERSION}-${RELEASE_DATE}
 export TITLE="👏👏${LIB_NAME}-${PLAT}-${RELEASE_VERSION}"
 
@@ -44,18 +55,28 @@ function init_platform
     cd $ROOT_DIR
 }
 
+# compile and keep the log, when it fails print the tail of the log,
+# otherwise the real error is hidden in an artifact nobody looks at.
+function compile_platform
+{
+    local plat=$1
+    local log_file="$DIST_DIR/$plat-compile-log-$RELEASE_VERSION.md"
+
+    if [[ $VERBOSE ]];then
+        ./main.sh compile -p $plat -c build -l ${LIB_NAME} 2>&1 | tee -a "$log_file"
+    elif ! ./main.sh compile -p $plat -c build -l ${LIB_NAME} >> "$log_file" 2>&1; then
+        echo "❌ compile $LIB_NAME for $plat failed, last 100 lines of $log_file:" >&2
+        tail -n 100 "$log_file" >&2
+        return 1
+    fi
+}
+
 function compile_ios_platform
 {
     echo "---do compile ios libs--------------------------------------"
 
-    local log_file="$DIST_DIR/ios-compile-log-$RELEASE_VERSION.md"
+    compile_platform ios
 
-    if [[ $VERBOSE ]];then
-        ./main.sh compile -p ios -c build -l ${LIB_NAME} 2>&1 | tee -a "$log_file"
-    else
-        ./main.sh compile -p ios -c build -l ${LIB_NAME} >> "$log_file" 2>&1
-    fi
-         
     cd build/product/ios/universal
     zip -ryq $DIST_DIR/${LIB_NAME}-ios-universal-${RELEASE_VERSION}.zip ./*
     
@@ -67,14 +88,8 @@ function compile_ios_platform
 function compile_macos_platform
 {
     echo "---do compile macos libs--------------------------------------"
-    
-    local log_file="$DIST_DIR/macos-compile-log-$RELEASE_VERSION.md"
 
-    if [[ $VERBOSE ]];then
-        ./main.sh compile -p macos -c build -l ${LIB_NAME} 2>&1 | tee -a "$log_file"
-    else
-        ./main.sh compile -p macos -c build -l ${LIB_NAME} >> "$log_file" 2>&1
-    fi
+    compile_platform macos
 
     cd build/product/macos/universal
     zip -ryq $DIST_DIR/${LIB_NAME}-macos-universal-${RELEASE_VERSION}.zip ./*
@@ -85,13 +100,7 @@ function compile_tvos_platform
 {
     echo "---do compile tvos libs--------------------------------------"
 
-    local log_file="$DIST_DIR/android-compile-log-$RELEASE_VERSION.md"
-
-    if [[ $VERBOSE ]];then
-        ./main.sh compile -p tvos -c build -l ${LIB_NAME} 2>&1 | tee -a "$log_file"
-    else
-        ./main.sh compile -p tvos -c build -l ${LIB_NAME} >> "$log_file" 2>&1
-    fi     
+    compile_platform tvos
 
     cd build/product/tvos/universal
     zip -ryq $DIST_DIR/${LIB_NAME}-tvos-universal-${RELEASE_VERSION}.zip ./*
@@ -105,14 +114,8 @@ function compile_tvos_platform
 function compile_android_platform
 {
     echo "---do compile android libs--------------------------------------"
-    
-    local log_file="$DIST_DIR/android-compile-log-$RELEASE_VERSION.md"
 
-    if [[ $VERBOSE ]];then
-        ./main.sh compile -p android -c build -l ${LIB_NAME} 2>&1 | tee -a "$log_file"
-    else
-        ./main.sh compile -p android -c build -l ${LIB_NAME} >> "$log_file" 2>&1
-    fi
+    compile_platform android
 
     cd build/product/android/universal
     zip -ryq $DIST_DIR/${LIB_NAME}-android-universal-${RELEASE_VERSION}.zip ./*
@@ -132,6 +135,11 @@ function replace_tag()
 {
     local file=$1
     local key=$2
+
+    if [[ ! -f "$file" ]]; then
+        echo "can't replace $key, no such file: $file" >&2
+        return 1
+    fi
 
     # check PRE_COMPILE_TAG_IOS
     if grep -q "$key" "$file"; then
@@ -170,6 +178,10 @@ function upgrade()
             replace_tag $file PRE_COMPILE_TAG_MACOS
             replace_tag $file PRE_COMPILE_TAG_TVOS
             replace_tag $file PRE_COMPILE_TAG_ANDROID
+        ;;
+        *)
+            echo "can't upgrade tag, unknown plat: [$PLAT]" >&2
+            return 1
         ;;
     esac
 
@@ -239,6 +251,10 @@ function main()
             compile_android_platform
 
             publish
+        ;;
+        *)
+            echo "unknown plat: [$PLAT], use one of [ios|macos|tvos|apple|android|all]" >&2
+            exit 1
         ;;
     esac
 }

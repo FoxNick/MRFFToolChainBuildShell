@@ -40,10 +40,15 @@ do_lipo_lib() {
                 mkdir -p $MR_UNI_PROD_DIR/$LIB_NAME/lib
             fi
         else
-            echo "can't find the $arch arch $lib"
+            echo "⚠️ can't find the $arch arch $lib" >&2
         fi
     done
-    
+
+    if [[ -z "$inputs" && -z "$inputs_sim" ]];then
+        echo "❌ none of the archs [$archs] built $lib, check the compile log." >&2
+        return 1
+    fi
+
     if [[ $inputs ]];then
         xcrun lipo -create $inputs -output $MR_UNI_PROD_DIR/$LIB_NAME/lib/${lib}.a
         xcrun lipo -info $MR_UNI_PROD_DIR/$LIB_NAME/lib/${lib}.a
@@ -184,6 +189,11 @@ function do_compile() {
         exit 1
     fi
     
+    if [[ ! -f "./$LIB_NAME.sh" ]]; then
+        echo "!! ERROR: no compile script for $LIB_NAME: $PWD/$LIB_NAME.sh" >&2
+        exit 1
+    fi
+
     mkdir -p "$MR_BUILD_PREFIX"
     ./$LIB_NAME.sh
 }

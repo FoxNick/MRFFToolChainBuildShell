@@ -5,6 +5,16 @@ set -e
 LIB_NAME=$1
 PLAT=$2
 
+if [[ -z $LIB_NAME || -z $PLAT ]]; then
+    echo "usage: $0 <lib name> <plat>" >&2
+    exit 1
+fi
+
+if [[ ! -f ./configs/libs/${LIB_NAME}.sh ]]; then
+    echo "no such lib config: ./configs/libs/${LIB_NAME}.sh" >&2
+    exit 1
+fi
+
 case $LIB_NAME in
     ass)
         if [[ $PLAT == all ]];then
@@ -224,5 +234,6 @@ case $LIB_NAME in
         fi
     ;;
     *)
+        echo "${LIB_NAME} has no dependency to install"
     ;;
 esac

@@ -15,21 +15,34 @@
 # limitations under the License.
 #
 
+# find a build tool and warn when it's missing, an empty path leads to
+# confusing failures deep inside the lib build scripts.
+function locate_build_tool()
+{
+    local tool="$1"
+    local path
+    if path=$(command -v "$tool"); then
+        echo "$path"
+    else
+        echo "⚠️ $tool not found in PATH, building the libs which need it will fail." >&2
+    fi
+}
+
 # Using Native CMake
-export MR_CMAKE_EXECUTABLE=$(which cmake)
+export MR_CMAKE_EXECUTABLE=$(locate_build_tool cmake)
 # Using Build machine's Ninja. It is used for libdav1d building. Needs to be installed
-export MR_NINJA_EXECUTABLE=$(which ninja)
+export MR_NINJA_EXECUTABLE=$(locate_build_tool ninja)
 # Meson is used for libdav1d building. Needs to be installed
-export MR_MESON_EXECUTABLE=$(which meson)
+export MR_MESON_EXECUTABLE=$(locate_build_tool meson)
 # Nasm is used for libdav1d and libx264 building. Needs to be installed
-export MR_NASM_EXECUTABLE=$(which nasm)
+export MR_NASM_EXECUTABLE=$(locate_build_tool nasm)
 # A utility to properly pick shared libraries by FFmpeg's configure script. Needs to be installed
-export MR_PKG_CONFIG_EXECUTABLE=$(which pkg-config)
+export MR_PKG_CONFIG_EXECUTABLE=$(locate_build_tool pkg-config)
 #on intel compile arm64 harfbuzz can't find pkg-config
-export PKG_CONFIG=$(which pkg-config)
+export PKG_CONFIG="$MR_PKG_CONFIG_EXECUTABLE"
 
 if [[ -z "$MR_WORKSPACE" ]];then
-    THIS_DIR=$(DIRNAME=$(dirname "${BASH_SOURCE[0]}"); cd "${DIRNAME}/../"; pwd)
+    THIS_DIR=$(DIRNAME=$(dirname "${BASH_SOURCE[0]}"); cd "${DIRNAME}/../" || exit 1; pwd)
     export MR_WORKSPACE="${THIS_DIR}/build"
 fi
 

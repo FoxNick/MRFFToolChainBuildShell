@@ -16,6 +16,7 @@
 #
 
 set -e
+set -o pipefail
 
 THIS_DIR=$(DIRNAME=$(dirname "$0"); cd "$DIRNAME"; pwd)
 cd "$THIS_DIR"
@@ -32,25 +33,36 @@ function download() {
     echo "---[download]-----------------"
     echo "$MR_DOWNLOAD_URL"
     
-    mkdir -p $(dirname "$dst")
+    mkdir -p "$(dirname "$dst")"
     local tname="${dst}.tmp"
-    curl -fL --retry 3 --retry-delay 5 --retry-max-time 30 "$MR_DOWNLOAD_URL" -o "$tname"
-    
-    if [[ $? -eq 0 ]];then
-        mv "$tname" "${dst}"
-    else
+    if ! curl -fL --retry 3 --retry-delay 5 --retry-max-time 30 "$MR_DOWNLOAD_URL" -o "$tname"; then
         rm -f "$tname"
+        echo "❌ download failed: $MR_DOWNLOAD_URL" >&2
+        exit 1
     fi
+
+    if [[ ! -s "$tname" ]]; then
+        rm -f "$tname"
+        echo "❌ downloaded an empty file: $MR_DOWNLOAD_URL" >&2
+        exit 1
+    fi
+
+    mv "$tname" "${dst}"
 }
 
 function extract(){
     local dst="$1"
     if [[ -f "$dst" ]];then
         mkdir -p "$MR_UNCOMPRESS_DIR"
-        unzip -oq "$dst" -d "$MR_UNCOMPRESS_DIR"
+        if ! unzip -oq "$dst" -d "$MR_UNCOMPRESS_DIR"; then
+            # a broken archive is cached, drop it so the next run downloads again.
+            rm -f "$dst"
+            echo "❌ can't extract $dst, it was removed, please retry." >&2
+            exit 1
+        fi
         echo "extract zip file"
     else
-        echo "you need download ${MR_DOWNLOAD_ONAME} firstly."
+        echo "you need download ${MR_DOWNLOAD_ONAME} firstly." >&2
         exit 1
     fi
 }
