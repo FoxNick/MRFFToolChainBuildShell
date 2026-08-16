@@ -182,6 +182,10 @@ function upgrade()
 function publish()
 {
     echo "---Create Release--------------------------------------"
+    if [[ "$GITHUB_EVENT_NAME" == 'pull_request' ]];then
+        echo "pull request build: skip push and release."
+        return
+    fi
     if [[ $DRYRUN ]];then
         echo "DRYRUN: gh release create $TAG -t $TITLE $DIST_DIR/*.*"
         return

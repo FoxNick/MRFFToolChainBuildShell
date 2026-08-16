@@ -143,10 +143,10 @@ index 1257cd1..db40420 100644
 +                if (c->hls_io_protocol_enable) {
 +                    char * url_start = NULL;
 +                    if (c->hls_io_protocol) {
-+                        strcpy(io_url, c->hls_io_protocol);
++                        av_strlcpy(io_url, c->hls_io_protocol, sizeof(io_url));
 +                    } else if ((url_start =  strstr(url,"http://")) ||
 +                                (url_start =  strstr(url,"https://"))) {
-+                        strncpy(io_url, url, url_start - url);
++                        av_strlcpy(io_url, url, FFMIN((size_t)(url_start - url) + 1, sizeof(io_url)));
 +                    }
 +                    av_strlcat(io_url, tmp_str, sizeof(io_url));
 +                    seg->url = av_strdup(io_url);
